@@ -537,3 +537,49 @@ def test_input_edge_cases_and_multi_user_lifecycle_reset() -> None:
 
     finally:
         _teardown_harness()
+
+
+def test_session_mismatch_isolation_prevents_cross_session_leakage() -> None:
+    harness = _build_harness()
+    session_a = "e2e-mismatch-a"
+    session_b = "e2e-mismatch-b"
+
+    try:
+        chat_a = harness.client.post(
+            "/api/v1/chat",
+            json={
+                "message": "Session A marker: I prefer conservative rollout plans.",
+                "session_id": session_a,
+                "top_k": 5,
+            },
+        )
+        _check("Mismatch session A chat status", chat_a.status_code == 200, str(chat_a.text))
+
+        memory_b = harness.client.get(f"/api/v1/memory/{session_b}")
+        memory_b_data = _assert_success_envelope("Mismatch memory session B", memory_b.json())
+        _check("Mismatch memory session B starts empty", memory_b_data["count"] == 0, str(memory_b_data))
+
+        profile_b = harness.client.get(f"/api/v1/twin/{session_b}/profile")
+        profile_b_data = _assert_success_envelope("Mismatch profile session B", profile_b.json())
+        _check("Mismatch profile session B has no memory", profile_b_data["memory_count"] == 0, str(profile_b_data))
+        _check("Mismatch profile session B status training", profile_b_data["twin_status"] == "training")
+
+        simulate_b = harness.client.post(
+            "/api/v1/twin/simulate",
+            json={
+                "session_id": session_b,
+                "scenario": "Should I launch this week or wait for more certainty?",
+                "debug": True,
+            },
+        )
+        _check("Mismatch simulation session B status", simulate_b.status_code == 200, str(simulate_b.text))
+        simulation_b_data = _assert_success_envelope("Mismatch simulation session B", simulate_b.json())
+        debug_payload = cast(dict[str, Any], simulation_b_data.get("debug") or {})
+
+        _check(
+            "Mismatch simulation session B used memories empty",
+            len(debug_payload.get("used_memories", [])) == 0,
+            str(debug_payload),
+        )
+    finally:
+        _teardown_harness()

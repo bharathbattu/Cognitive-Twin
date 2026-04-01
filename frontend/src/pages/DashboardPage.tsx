@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { fetchBackendHealth } from "@/api/twinApi";
 import AppShell from "@/components/layout/AppShell";
@@ -13,6 +13,7 @@ function DashboardPage() {
   const { sessionId, setSessionId } = useSessionId();
   const [refreshKey, setRefreshKey] = useState(0);
   const [backendStatus, setBackendStatus] = useState<"connected" | "down">("down");
+  const consecutiveHealthFailuresRef = useRef(0);
 
   const handleDataRefresh = useCallback((): void => {
     setRefreshKey((current) => current + 1);
@@ -21,14 +22,22 @@ function DashboardPage() {
   const refreshFromBackend = useCallback(async () => {
     try {
       await fetchBackendHealth();
+      consecutiveHealthFailuresRef.current = 0;
       setBackendStatus("connected");
       handleDataRefresh();
     } catch {
-      setBackendStatus("down");
+      consecutiveHealthFailuresRef.current += 1;
+      setBackendStatus((previous) => {
+        if (previous === "down") {
+          return "down";
+        }
+        return consecutiveHealthFailuresRef.current >= 2 ? "down" : previous;
+      });
     }
   }, [handleDataRefresh]);
 
   const handleRealtimeEvent = useCallback(() => {
+    consecutiveHealthFailuresRef.current = 0;
     setBackendStatus("connected");
     handleDataRefresh();
   }, [handleDataRefresh]);

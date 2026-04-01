@@ -6,7 +6,7 @@ import re
 from datetime import UTC, datetime
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, cast
 
 from app.models.schemas.twin import TwinProfileResponse
 from app.services.memory.memory_service import MemoryService
@@ -17,6 +17,7 @@ COGNITIVE_EXTRACTION_ROLE = "cognitive_extraction"
 COGNITIVE_PROFILE_ROLE = "cognitive_profile"
 TRAINING_STATUS = "training"
 DEPLOYED_STATUS = "deployed"
+TwinStatus = Literal["training", "deployed"]
 MIN_OBSERVATIONS = 8
 PROFILE_KEYS = ("thinking_style", "decision_traits", "preferences", "contexts")
 INSUFFICIENT_CONTEXT = "The message does not contain enough cognitive evidence."
@@ -86,6 +87,7 @@ class ProfileService:
         return profile
 
     def update_profile(self, session_id: str, extracted_data: dict[str, Any]) -> dict[str, list[str]]:
+        logger.info("Updating profile for session '%s'.", session_id)
         previous_status = self.get_twin_status(session_id)
         twin_status = DEPLOYED_STATUS if self.is_ready_for_deployment(session_id) else TRAINING_STATUS
         deployment_completed = previous_status != DEPLOYED_STATUS and twin_status == DEPLOYED_STATUS
@@ -110,6 +112,7 @@ class ProfileService:
         )
         if deployment_completed:
             logger.info("Twin reached deployment threshold for session '%s'.", session_id)
+        logger.info("Profile updated for session '%s' with twin_status='%s'.", session_id, twin_status)
         return profile
 
     def transition_lifecycle_if_deployed(self, session_id: str) -> dict[str, Any]:
@@ -161,7 +164,7 @@ class ProfileService:
         meaningful_observations = sum(1 for entry in user_entries if self._is_meaningful_user_input(entry.text))
         return meaningful_observations >= MIN_OBSERVATIONS
 
-    def get_twin_status(self, session_id: str) -> str:
+    def get_twin_status(self, session_id: str) -> TwinStatus:
         latest_profile = self.memory_service.latest_memory(
             session_id=session_id,
             role=COGNITIVE_PROFILE_ROLE,
@@ -170,10 +173,11 @@ class ProfileService:
         if latest_profile:
             status = latest_profile.metadata.get("twin_status")
             if status in {TRAINING_STATUS, DEPLOYED_STATUS}:
-                return str(status)
-        return DEPLOYED_STATUS if self.is_ready_for_deployment(session_id) else TRAINING_STATUS
+                return cast(TwinStatus, status)
+        return cast(TwinStatus, DEPLOYED_STATUS if self.is_ready_for_deployment(session_id) else TRAINING_STATUS)
 
     def build_profile(self, session_id: str) -> TwinProfileResponse:
+        logger.info("Building profile response for session '%s'.", session_id)
         profile = self.get_profile(session_id)
         weights = self._get_weights(session_id)
         memory_list = self.memory_service.list_memories(session_id)
@@ -183,13 +187,20 @@ class ProfileService:
         if not latest_topics:
             latest_topics = [item.text[:60] for item in memory_list.items[-5:]]
 
-        return TwinProfileResponse(
+        response = TwinProfileResponse(
             session_id=session_id,
             summary=self._build_summary(profile, weights),
             memory_count=memory_list.count,
             latest_topics=latest_topics,
             twin_status=twin_status,
         )
+        logger.info(
+            "Built profile response for session '%s' memory_count=%s twin_status='%s'.",
+            session_id,
+            response.memory_count,
+            response.twin_status,
+        )
+        return response
 
     def _build_from_extractions(self, extraction_payloads: list[dict[str, Any]]) -> tuple[dict[str, list[str]], dict[str, dict[str, int]]]:
         weights = self._empty_weights()

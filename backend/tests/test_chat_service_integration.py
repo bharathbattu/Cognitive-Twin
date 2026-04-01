@@ -40,6 +40,11 @@ class StubOpenRouterService:
         return f"reply to: {message} ({len(memories)} memories)"
 
 
+class FailingOpenRouterService:
+    async def generate_reply(self, message: str, memories: list[dict]) -> str:
+        raise RuntimeError("openrouter unavailable")
+
+
 class StubExtractionService:
     def extract_cognition(self, text: str) -> dict:
         return {
@@ -119,6 +124,37 @@ def test_chat_service_runs_extraction_and_profile_update() -> None:
     assistant_records = [record for record in memory_service.records if record["role"] == "assistant"]
     assert len(user_records) == 1
     assert len(assistant_records) == 1
+    assert [event_type for _session_id, event_type, _payload in realtime_event_service.events] == [
+        "memory_update",
+        "profile_update",
+    ]
+
+
+def test_chat_service_returns_controlled_reply_when_openrouter_fails() -> None:
+    memory_service = StubMemoryService()
+    profile_service = StubProfileService()
+    realtime_event_service = StubRealtimeEventService()
+    chat_service = ChatService(
+        memory_service=memory_service,  # type: ignore[arg-type]
+        openrouter_service=FailingOpenRouterService(),  # type: ignore[arg-type]
+        extraction_service=StubExtractionService(),  # type: ignore[arg-type]
+        profile_service=profile_service,  # type: ignore[arg-type]
+        realtime_event_service=realtime_event_service,  # type: ignore[arg-type]
+    )
+
+    response = asyncio.run(
+        chat_service.chat(
+            ChatRequest(
+                message="I compare options carefully before choosing.",
+                session_id="session-chat-fallback",
+                top_k=3,
+            )
+        )
+    )
+
+    assert response.reply == "The AI service is temporarily unavailable. Please try again shortly."
+    assert len([record for record in memory_service.records if record["role"] == "user"]) == 1
+    assert len([record for record in memory_service.records if record["role"] == "assistant"]) == 1
     assert [event_type for _session_id, event_type, _payload in realtime_event_service.events] == [
         "memory_update",
         "profile_update",
