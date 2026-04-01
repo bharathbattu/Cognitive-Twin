@@ -50,6 +50,10 @@ function normalizeClientError(error: Error, timeoutMs: number): Error {
     return new Error(`Request timed out after ${timeoutSeconds}s. Please try again.`);
   }
 
+  if (/failed to fetch/i.test(error.message)) {
+    return new Error("Unable to reach the backend. It may be down or blocked by a CORS origin mismatch.");
+  }
+
   return error;
 }
 
@@ -101,7 +105,8 @@ export async function apiClient<T>(path: string, options?: ApiClientOptions): Pr
       lastError = error instanceof Error ? error : new Error("Unknown API client error.");
       lastError = normalizeClientError(lastError, timeoutMs);
       const isAbort = lastError.name === "AbortError" || /timed out/i.test(lastError.message);
-      const isNetwork = /network|failed to fetch/i.test(lastError.message) || isAbort;
+      const isNetwork =
+        /network|failed to fetch|unable to reach the backend|cors/i.test(lastError.message) || isAbort;
       if (!isNetwork || attempt >= retries) {
         console.error("API Error:", lastError);
         throw lastError;

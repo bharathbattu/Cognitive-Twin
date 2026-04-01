@@ -65,13 +65,23 @@ async def request_logging_middleware(request: Request, call_next):
     )
     return response
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[settings.frontend_origin, "http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if settings.cors_allow_origin_regex:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.resolved_frontend_origins,
+        allow_origin_regex=settings.cors_allow_origin_regex,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.resolved_frontend_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
 @app.exception_handler(Exception)

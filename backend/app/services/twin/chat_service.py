@@ -4,7 +4,7 @@ import re
 from typing import Any
 
 from app.models.schemas.chat import ChatRequest, ChatResponse
-from app.services.ai.openrouter_service import OpenRouterService
+from app.services.ai.openrouter_service import CONTROLLED_CHAT_FAILURE, OpenRouterService
 from app.services.memory.memory_service import MemoryService
 from app.services.twin.extraction_service import ExtractionService
 from app.services.twin.profile_service import ProfileService
@@ -57,7 +57,14 @@ class ChatService:
         )
 
         profile_data = self._extract_and_store_cognition(payload.session_id, payload.message)
-        raw_response = await self.openrouter_service.generate_reply(payload.message, memory_hits)
+        try:
+            raw_response = await self.openrouter_service.generate_reply(payload.message, memory_hits)
+        except Exception:
+            logger.exception(
+                "Chat generation failed for session '%s'. Returning controlled fallback reply.",
+                payload.session_id,
+            )
+            raw_response = CONTROLLED_CHAT_FAILURE
         cleaned_response = clean_response(raw_response)
         logger.debug("Chat raw response session='%s': %s", payload.session_id, raw_response)
 

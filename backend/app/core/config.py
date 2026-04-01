@@ -10,6 +10,13 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 PROJECT_ROOT = BACKEND_DIR.parent
 logger = logging.getLogger(__name__)
 _STARTUP_CONFIGURATION_LOGGED = False
+DEV_LOOPBACK_ORIGIN_REGEX = r"^https?://(?:localhost|127\.0\.0\.1)(?::\d+)?$"
+DEV_LOOPBACK_ORIGINS = (
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+)
 
 
 class Settings(BaseSettings):
@@ -19,6 +26,7 @@ class Settings(BaseSettings):
     app_port: int = 8000
     api_v1_prefix: str = "/api/v1"
     frontend_origin: str = "http://localhost:5173"
+    frontend_origins: str = Field(default="", validation_alias="FRONTEND_ORIGINS")
 
     openrouter_api_key: str = Field(..., validation_alias="OPENROUTER_API_KEY")
     openrouter_base_url: str = Field(
@@ -63,6 +71,31 @@ class Settings(BaseSettings):
     def resolved_memory_faiss_path(self) -> Path:
         path = Path(self.memory_faiss_path)
         return (BACKEND_DIR / path).resolve() if not path.is_absolute() else path
+
+    @property
+    def resolved_frontend_origins(self) -> list[str]:
+        candidates: list[str] = [self.frontend_origin]
+        if self.frontend_origins.strip():
+            candidates.extend(origin for origin in self.frontend_origins.split(","))
+
+        if self.app_env.lower() in {"development", "dev", "local", "test"}:
+            candidates.extend(DEV_LOOPBACK_ORIGINS)
+
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for candidate in candidates:
+            origin = candidate.strip().rstrip("/")
+            if not origin or origin in seen:
+                continue
+            seen.add(origin)
+            normalized.append(origin)
+        return normalized
+
+    @property
+    def cors_allow_origin_regex(self) -> str | None:
+        if self.app_env.lower() in {"development", "dev", "local", "test"}:
+            return DEV_LOOPBACK_ORIGIN_REGEX
+        return None
 
 
 @lru_cache
