@@ -1,0 +1,26 @@
+{
+  "session_id": "edge-lifecycle",
+  "status": "archived",
+  "profile": {
+    "thinking_style": [
+      "reflective and analytical"
+    ],
+    "decision_traits": [
+      "deliberate",
+      "tradeoff-aware"
+    ],
+    "preferences": [
+      "clear tradeoffs",
+      "low-regret decisions"
+    ],
+    "contexts": [
+      "the user evaluates: lifecycle sample 0: i compare options and pick the safer path.",
+      "the user evaluates: lifecycle sample 1: i compare options and pick the safer path.",
+      "the user evaluates: lifecycle sample 2: i compare options and pick the safer path.",
+      "the user evaluates: lifecycle sample 3: i compare options and pick the safer path.",
+      "the user evaluates: lifecycle sample 4: i compare options and pick the safer path."
+    ]
+  },
+  "memory_count": 36,
+  "timestamp": "2026-04-01T04:12:32.627632+00:00"
+}

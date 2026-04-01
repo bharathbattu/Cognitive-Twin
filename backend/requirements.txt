@@ -1,0 +1,10 @@
+fastapi[standard]
+openai
+faiss-cpu
+numpy
+pydantic-settings
+python-dotenv
+pytest
+ruff
+mypy
+bandit
