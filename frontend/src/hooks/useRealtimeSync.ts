@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import { getBackendBaseUrl } from "@/api/client";
+import { buildWsUrl } from "@/config/api";
 
 type RealtimeEventType = "profile_update" | "memory_update" | "simulation_result" | "error";
 
@@ -16,9 +16,7 @@ interface UseRealtimeSyncOptions {
 }
 
 function getWebSocketUrl(sessionId: string): string {
-  const backendBase = getBackendBaseUrl();
-  const wsBase = backendBase.replace(/^http/, "ws");
-  return `${wsBase}/ws/${encodeURIComponent(sessionId)}`;
+  return buildWsUrl(`/ws/${encodeURIComponent(sessionId)}`);
 }
 
 export function useRealtimeSync({ sessionId, onEvent, pollFallback }: UseRealtimeSyncOptions) {
@@ -72,6 +70,11 @@ export function useRealtimeSync({ sessionId, onEvent, pollFallback }: UseRealtim
         return;
       }
 
+      const currentSocket = socketRef.current;
+      if (currentSocket && (currentSocket.readyState === WebSocket.CONNECTING || currentSocket.readyState === WebSocket.OPEN)) {
+        return;
+      }
+
       try {
         const socket = new WebSocket(getWebSocketUrl(sessionId));
         socketRef.current = socket;
@@ -94,16 +97,22 @@ export function useRealtimeSync({ sessionId, onEvent, pollFallback }: UseRealtim
         };
 
         socket.onerror = () => {
+          console.warn("Realtime websocket error detected. Falling back to polling.");
           setIsRealtimeConnected(false);
           void startPollingFallback();
         };
 
-        socket.onclose = () => {
+        socket.onclose = (event) => {
+          if (socketRef.current === socket) {
+            socketRef.current = null;
+          }
+          console.warn(`Realtime websocket closed (${event.code}). Scheduling reconnect.`);
           setIsRealtimeConnected(false);
           void startPollingFallback();
           scheduleReconnect();
         };
-      } catch {
+      } catch (error) {
+        console.warn("Unable to establish realtime websocket connection.", error);
         setIsRealtimeConnected(false);
         void startPollingFallback();
         scheduleReconnect();

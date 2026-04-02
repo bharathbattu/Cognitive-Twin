@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+import { API_URL, buildApiUrl } from "@/config/api";
+
 const REQUEST_TIMEOUT_MS = 10_000;
 const NETWORK_RETRIES = 1;
 
@@ -14,11 +15,11 @@ export interface ApiEnvelope<T> {
 }
 
 export function getApiBaseUrl(): string {
-  return API_BASE_URL;
+  return API_URL;
 }
 
 export function getBackendBaseUrl(): string {
-  return API_BASE_URL.replace(/\/api\/v1\/?$/, "");
+  return API_URL.replace(/\/api\/v1\/?$/, "");
 }
 
 async function fetchWithTimeout(url: string, timeoutMs: number, init?: RequestInit): Promise<Response> {
@@ -71,7 +72,12 @@ async function parseResponsePayload(response: Response): Promise<unknown> {
 
 export async function apiClient<T>(path: string, options?: ApiClientOptions): Promise<T> {
   const { timeoutMs = REQUEST_TIMEOUT_MS, retries = NETWORK_RETRIES, ...init } = options ?? {};
-  const endpoint = path.startsWith("http") ? path : `${API_BASE_URL}${path}`;
+  const endpoint = path.startsWith("http") ? path : buildApiUrl(path);
+
+  if (!endpoint.startsWith("http")) {
+    throw new Error("VITE_API_URL is not configured. Set it in frontend environment variables.");
+  }
+
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
