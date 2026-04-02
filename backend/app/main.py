@@ -31,10 +31,39 @@ app = FastAPI(title=settings.app_name, lifespan=lifespan)
 logger = logging.getLogger(__name__)
 
 
+if settings.cors_allow_origin_regex:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.resolved_frontend_origins,
+        allow_origin_regex=settings.cors_allow_origin_regex,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+elif settings.cors_allow_all:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    logger.warning("CORS permissive mode enabled (allow_origins=*)")
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.resolved_frontend_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+
 @app.middleware("http")
 async def request_logging_middleware(request: Request, call_next):
     start_time = time.perf_counter()
-    logger.info("Request start method='%s' path='%s'", request.method, request.url.path)
+    origin = request.headers.get("origin", "-")
+    logger.info("Request start method='%s' url='%s' origin='%s'", request.method, request.url, origin)
 
     try:
         response = await call_next(request)
@@ -64,24 +93,6 @@ async def request_logging_middleware(request: Request, call_next):
         duration_ms,
     )
     return response
-
-if settings.cors_allow_origin_regex:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.resolved_frontend_origins,
-        allow_origin_regex=settings.cors_allow_origin_regex,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-else:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.resolved_frontend_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
 
 
 @app.exception_handler(Exception)

@@ -9,7 +9,12 @@ function removeTrailingSlash(url: string): string {
 }
 
 export const API_URL = removeTrailingSlash(rawApiUrl);
-export const WS_URL = API_URL.replace("https", "wss").replace("http", "ws");
+export const BACKEND_URL = API_URL.replace(/\/api\/v1\/?$/, "");
+export const WS_URL = BACKEND_URL.replace("https", "wss").replace("http", "ws");
+
+if (API_URL) {
+  console.log("API_URL:", API_URL);
+}
 
 export function buildApiUrl(path: string): string {
   if (!API_URL) {

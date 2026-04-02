@@ -18,7 +18,9 @@ export function sendChatMessage(payload: ChatRequest) {
 }
 
 export async function fetchTwinProfile(sessionId: string): Promise<TwinProfile> {
-  const data = await apiClient<TwinProfile>(`/twin/${encodeURIComponent(sessionId)}/profile`);
+  const data = await apiClient<TwinProfile>(`/twin/${encodeURIComponent(sessionId)}/profile`, {
+    method: "GET"
+  });
   const profile: TwinProfile = {
     session_id: data.session_id,
     summary: data.summary,
@@ -32,7 +34,9 @@ export async function fetchTwinProfile(sessionId: string): Promise<TwinProfile> 
 }
 
 export function fetchSessionMemory(sessionId: string) {
-  return apiClient<MemoryListResponse>(`/memory/${encodeURIComponent(sessionId)}`);
+  return apiClient<MemoryListResponse>(`/memory/${encodeURIComponent(sessionId)}`, {
+    method: "GET"
+  });
 }
 
 export function simulateTwinScenario(payload: SimulationRequest) {
@@ -51,5 +55,7 @@ export function transitionTwinLifecycle(sessionId: string) {
 }
 
 export async function fetchBackendHealth(): Promise<{ status: string }> {
-  return apiClient<{ status: string }>(`${getBackendBaseUrl()}/health`);
+  return apiClient<{ status: string }>(`${getBackendBaseUrl()}/health`, {
+    method: "GET"
+  });
 }

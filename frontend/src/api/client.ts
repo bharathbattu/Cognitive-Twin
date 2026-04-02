@@ -1,4 +1,4 @@
-import { API_URL, buildApiUrl } from "@/config/api";
+import { API_URL, BACKEND_URL, buildApiUrl } from "@/config/api";
 
 const REQUEST_TIMEOUT_MS = 10_000;
 const NETWORK_RETRIES = 1;
@@ -19,21 +19,56 @@ export function getApiBaseUrl(): string {
 }
 
 export function getBackendBaseUrl(): string {
-  return API_URL.replace(/\/api\/v1\/?$/, "");
+  return BACKEND_URL;
 }
 
-async function fetchWithTimeout(url: string, timeoutMs: number, init?: RequestInit): Promise<Response> {
+function normalizeMethod(method?: string): string {
+  return (method ?? "GET").toUpperCase();
+}
+
+function formatBodyForLog(body: BodyInit | null | undefined): string {
+  if (body == null) {
+    return "<empty>";
+  }
+  if (typeof body === "string") {
+    return body;
+  }
+  if (body instanceof FormData) {
+    return "<form-data>";
+  }
+  if (body instanceof URLSearchParams) {
+    return body.toString();
+  }
+  return "<binary>";
+}
+
+function withDefaultHeaders(init: RequestInit | undefined, method: string): HeadersInit {
+  const baseHeaders = init?.headers ?? {};
+  if (init?.body == null) {
+    return baseHeaders;
+  }
+
+  const headers = new Headers(baseHeaders);
+  const hasContentType = headers.has("Content-Type");
+  const canSetJsonHeader = typeof init.body === "string" && method !== "GET" && method !== "HEAD";
+
+  if (!hasContentType && canSetJsonHeader) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  return headers;
+}
+
+async function fetchWithTimeout(url: string, timeoutMs: number, method: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     return await fetch(url, {
       ...init,
+      method,
       signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        ...(init?.headers ?? {})
-      }
+      headers: withDefaultHeaders(init, method)
     });
   } finally {
     clearTimeout(timeoutId);
@@ -73,23 +108,34 @@ async function parseResponsePayload(response: Response): Promise<unknown> {
 export async function apiClient<T>(path: string, options?: ApiClientOptions): Promise<T> {
   const { timeoutMs = REQUEST_TIMEOUT_MS, retries = NETWORK_RETRIES, ...init } = options ?? {};
   const endpoint = path.startsWith("http") ? path : buildApiUrl(path);
+  const method = normalizeMethod(init.method);
 
   if (!endpoint.startsWith("http")) {
     throw new Error("VITE_API_URL is not configured. Set it in frontend environment variables.");
   }
 
+  console.log("API Request:", {
+    url: endpoint,
+    method,
+    payload: formatBodyForLog(init.body)
+  });
+
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
-      const response = await fetchWithTimeout(endpoint, timeoutMs, init);
+      const response = await fetchWithTimeout(endpoint, timeoutMs, method, init);
       const payload = await parseResponsePayload(response);
 
       if (!response.ok) {
+        if (response.status === 405) {
+          throw new Error(`Method mismatch (${method}) for endpoint ${endpoint}.`);
+        }
+
         const errorMessage =
           typeof payload === "object" && payload && "error" in payload && typeof (payload as { error?: unknown }).error === "string"
             ? (payload as { error: string }).error
-            : `Request failed: ${response.status}`;
+            : `Request failed: ${response.status} (${method} ${endpoint})`;
         throw new Error(errorMessage);
       }
 
