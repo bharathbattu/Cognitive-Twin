@@ -21,7 +21,7 @@ def test_cors_preflight_allows_localhost_and_loopback_origins() -> None:
         assert response.headers.get("access-control-allow-origin") == origin
 
 
-def test_cors_preflight_rejects_unknown_origin() -> None:
+def test_cors_preflight_allows_unknown_origin_when_permissive_mode_enabled() -> None:
     client = TestClient(app)
 
     response = client.options(
@@ -32,4 +32,5 @@ def test_cors_preflight_rejects_unknown_origin() -> None:
         },
     )
 
-    assert response.status_code == 400
+    assert response.status_code == 200
+    assert response.headers.get("access-control-allow-origin") == "https://evil.example"

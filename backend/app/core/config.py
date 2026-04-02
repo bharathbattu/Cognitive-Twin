@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     frontend_origin: str = "http://localhost:5173"
     frontend_origins: str = Field(default="", validation_alias="FRONTEND_ORIGINS")
+    cors_allow_all: bool = Field(default=True, validation_alias="CORS_ALLOW_ALL")
 
     openrouter_api_key: str = Field(..., validation_alias="OPENROUTER_API_KEY")
     openrouter_base_url: str = Field(
@@ -93,6 +94,8 @@ class Settings(BaseSettings):
 
     @property
     def cors_allow_origin_regex(self) -> str | None:
+        if self.cors_allow_all:
+            return None
         if self.app_env.lower() in {"development", "dev", "local", "test"}:
             return DEV_LOOPBACK_ORIGIN_REGEX
         return None

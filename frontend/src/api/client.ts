@@ -1,4 +1,4 @@
-import { API_URL, buildApiUrl } from "@/config/api";
+import { API_URL, BACKEND_URL, buildApiUrl } from "@/config/api";
 
 const REQUEST_TIMEOUT_MS = 10_000;
 const NETWORK_RETRIES = 1;
@@ -19,7 +19,7 @@ export function getApiBaseUrl(): string {
 }
 
 export function getBackendBaseUrl(): string {
-  return API_URL.replace(/\/api\/v1\/?$/, "");
+  return BACKEND_URL;
 }
 
 async function fetchWithTimeout(url: string, timeoutMs: number, init?: RequestInit): Promise<Response> {

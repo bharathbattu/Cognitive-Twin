@@ -34,7 +34,8 @@ logger = logging.getLogger(__name__)
 @app.middleware("http")
 async def request_logging_middleware(request: Request, call_next):
     start_time = time.perf_counter()
-    logger.info("Request start method='%s' path='%s'", request.method, request.url.path)
+    origin = request.headers.get("origin", "-")
+    logger.info("Request start method='%s' path='%s' origin='%s'", request.method, request.url.path, origin)
 
     try:
         response = await call_next(request)
@@ -74,6 +75,15 @@ if settings.cors_allow_origin_regex:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+elif settings.cors_allow_all:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    logger.warning("CORS permissive mode enabled (allow_origins=*)")
 else:
     app.add_middleware(
         CORSMiddleware,
