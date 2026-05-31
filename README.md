@@ -255,4 +255,4 @@ Good first contribution areas include:
 
 ## Maintainers
 
-The project is being built collaboratively by Bharath Kumar and my brother as an exploration of personalized, memory-driven AI systems.
+The project is being built collaboratively by Bharath Kumar and B. Rickwith as an exploration of personalized, memory-driven AI systems.
