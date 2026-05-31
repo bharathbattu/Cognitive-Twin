@@ -1,70 +1,89 @@
 # Cognitive Twin
 
-> A memory-driven AI system that learns how a user thinks and simulates their decisions.
-
----
+> A memory-driven AI system that builds a persistent cognitive profile and simulates how a user is likely to decide in new situations.
 
 ## Overview
 
-**Cognitive Twin** is a full-stack AI system designed to model user behavior, thinking patterns, and decision-making processes.
+Cognitive Twin is an open-source full-stack AI system for modeling user behavior, preferences, and decision patterns over time. Instead of producing generic replies, it combines structured memory, semantic retrieval, and reasoning to generate decisions grounded in prior interactions.
 
-Unlike traditional chatbots that generate generic responses, this system builds a **persistent cognitive profile** and uses it to **simulate what the user would do in new situations**.
+The project is designed as a reference architecture for developers interested in personalized AI, long-term memory systems, behavior-aware assistants, and simulation-driven agent workflows.
 
----
+## Why this project matters
+
+Most AI products still operate with shallow session memory. They can answer questions, but they usually do not preserve a durable understanding of how a person thinks, what they value, or how they make trade-offs.
+
+Cognitive Twin explores a different approach:
+
+- Persistent user understanding instead of session-only context.
+- Memory-backed reasoning instead of generic one-shot responses.
+- Decision simulation instead of simple text generation.
+- A reusable architecture for building personalized AI systems.
+
+This makes the project useful not only as an application, but also as an open-source foundation for experimentation in memory, personalization, and cognitive modeling.
+
+## Core idea
+
+The system learns from user interactions, extracts behavioral traits and preferences, stores them in long-term memory, and uses that history to simulate likely actions in unfamiliar scenarios.
+
+In simple terms:
+
+1. A user interacts with the system.
+2. The system extracts useful behavioral signals.
+3. Those signals are stored in structured and semantic memory.
+4. A cognitive profile is updated over time.
+5. The simulation engine predicts what the user would likely choose, with reasoning tied to prior evidence.
 
 ## Problem
 
-Most AI systems today:
+Most AI systems today have three major limitations:
 
-- Provide generic, one-size-fits-all responses
-- Lack persistent understanding of the user
-- Do not learn from behavior over time
+- They provide broad, one-size-fits-all responses.
+- They do not maintain a meaningful model of the user across time.
+- They rarely reason from behavioral history when generating suggestions or decisions.
 
-There is no system that understands **how a user thinks and decides**.
-
----
+As a result, even advanced chat systems often feel stateless, repetitive, or weakly personalized.
 
 ## Solution
 
-Cognitive Twin introduces a **behavior-aware AI system** that:
+Cognitive Twin introduces a behavior-aware architecture that:
 
-- Learns thinking patterns from conversations
-- Stores structured and semantic memory
-- Builds a dynamic cognitive profile
-- Simulates user decisions with reasoning
+- Learns thinking style, preferences, and decision tendencies from interactions.
+- Stores both structured memory and semantic memory.
+- Maintains a dynamic cognitive profile that evolves over time.
+- Simulates user decisions with reasoning grounded in past behavior.
 
----
+## Key features
 
-## Key Features
+### Cognitive modeling
 
-### Cognitive Modeling
+- Extracts thinking style, preferences, and decision traits from conversations.
+- Builds a structured cognitive profile that becomes more useful over repeated interactions.
+- Separates behavioral understanding from raw chat history.
 
-- Extracts thinking style, decision traits, and preferences
-- Builds a structured cognitive profile over time
+### Memory system
 
-### Memory System
+- JSON storage for structured long-term behavioral data.
+- FAISS-based vector retrieval for semantic access to relevant past experiences.
+- Archived memory lifecycle to support reuse, reset, and future extension.
 
-- JSON storage -> structured behavioral data
-- FAISS -> semantic retrieval of past experiences
+### Simulation engine
 
-### Simulation Engine
+- Predicts likely user choices in new situations.
+- Produces reasoning based on observed preferences and prior patterns.
+- Moves beyond response generation into behavior-oriented inference.
 
-- Predicts user decisions in new scenarios
-- Generates reasoning grounded in past behavior
+### Lifecycle-based twin generation
 
-### Lifecycle-Based Twin Generation
+- Training -> profile formation -> deployment -> reset.
+- Supports forming a stable twin after enough interaction.
+- Preserves previous twins while allowing the system to begin modeling a new user.
 
-- Training -> Deployment -> Reset
-- After sufficient interactions, a stable Cognitive Twin is formed
-- System resets to model a new user while preserving previous twin
+### Real-time sync
 
-### Real-Time Sync
+- WebSocket-based updates for memory, profile state, and simulation output.
+- Improves responsiveness for interactive interfaces and monitoring.
 
-- WebSocket-based updates for memory, profile, and simulation
-
----
-
-## System Architecture
+## Architecture
 
 ```text
 User Input
@@ -75,124 +94,165 @@ User Input
  -> Output (Decision + Reasoning)
 ```
 
-## Tech Stack
+### System flow
 
-### Frontend
-
-- React 19 + TypeScript + Vite
-- Tailwind CSS
-
-### Backend Setup
-
-- FastAPI + Pydantic
-
-### AI Layer
-
-- OpenRouter (Gemma 27B + LLaMA 70B)
-
-### Memory Layer
-
-- JSON (structured memory)
-- FAISS (vector search)
+- **Extraction Engine**: Identifies preferences, traits, reasoning cues, and behavioral signals.
+- **Memory Layer**: Stores facts and experiences in both structured JSON and semantic vector memory.
+- **Cognitive Profile**: Aggregates persistent user patterns into a usable profile.
+- **Simulation Engine**: Uses memory plus profile context to infer likely future decisions.
+- **Response Layer**: Returns both the predicted decision and the reasoning behind it.
 
 ## Example
 
-### User Input
+### User input
 
-I prefer risky opportunities over safe jobs.
+> I usually choose risky opportunities over safe jobs if there is strong learning potential.
 
-### Simulation
+### Simulated outcome
 
-The user would likely reject a stable corporate job due to a strong preference for growth, risk-taking, and building new ventures.
+The system may infer that the user is more likely to reject a stable corporate role in favor of a higher-growth but uncertain opportunity, especially when autonomy, upside, or learning potential is high.
 
-## What Makes It Unique
+## Tech stack
 
-- Moves beyond chatbots into a cognitive modeling system
-- Simulates decisions, not just answers questions
-- Combines memory, reasoning, and personalization
-- Supports lifecycle-based AI identity generation
+### Frontend
 
-## API Overview
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
 
-- POST /api/v1/chat -> interact with Cognitive Twin
-- GET /api/v1/memory/{session_id} -> retrieve memory
-- GET /api/v1/twin/{session_id}/profile -> cognitive profile
-- POST /api/v1/twin/simulate -> decision simulation
-- WS /ws/{session_id} -> real-time updates
+### Backend
+
+- FastAPI
+- Pydantic
+
+### AI layer
+
+- OpenRouter
+- Gemma 27B
+- LLaMA 70B
+
+### Memory layer
+
+- JSON for structured memory
+- FAISS for semantic retrieval
+
+## API overview
+
+- `POST /api/v1/chat` -> interact with Cognitive Twin
+- `GET /api/v1/memory/{session_id}` -> retrieve memory state
+- `GET /api/v1/twin/{session_id}/profile` -> retrieve cognitive profile
+- `POST /api/v1/twin/simulate` -> simulate user decision-making
+- `WS /ws/{session_id}` -> stream real-time updates
+
+## Project structure
+
+```text
+backend/
+frontend/
+data/
+  json/
+  faiss/
+  json/archive/
+```
 
 ## Setup
 
 ### Backend
 
-```powershell
+```bash
 cd backend
 pip install -r requirements.txt
-Copy-Item .env.example .env
+cp .env.example .env
 ```
 
-Set:
+Set the environment variables:
 
 ```env
 OPENROUTER_API_KEY=your_key
 DEFAULT_MODEL=meta-llama/llama-3.3-70b-instruct
 ```
 
-Run:
+Run the backend:
 
-```powershell
+```bash
 fastapi dev app/main.py
 ```
 
-### Frontend Setup
+### Frontend
 
-```powershell
+```bash
 cd frontend
 npm install
-Copy-Item .env.example .env
+cp .env.example .env
 npm run dev
 ```
 
-## Data Storage
+## Development commands
 
-- data/json -> structured memory
-- data/faiss -> vector index
-- data/json/archive -> archived cognitive twins
+### Backend
 
-## Development
-
-### Backend Commands
-
-```powershell
+```bash
 pytest -q
 ruff check app tests
 mypy app
 bandit -r app
 ```
 
-### Frontend Commands
+### Frontend
 
-```powershell
+```bash
 npm run lint
 npm run typecheck
 npm run build
 ```
 
-## Future Enhancements
+## Use cases
 
-- Emotion-aware cognitive modeling
-- Reinforcement learning-based adaptation
-- Multi-user scalable deployment
-- Behavioral analytics dashboard
+Cognitive Twin can serve as a foundation for:
 
-## Final Thought
+- Personalized AI assistants with long-term user understanding.
+- Decision-support systems that adapt to individual behavior.
+- Research prototypes in memory-augmented agents.
+- Behavioral simulation systems for coaching, reflection, or recommendation.
+- Experimental products built around persistent AI identity.
 
-Cognitive Twin represents a shift from:
+## What makes it different
 
-- AI that answers questions
-- AI that understands and simulates human behavior
+- It focuses on modeling how a user thinks, not just what they say.
+- It treats memory as a first-class system component.
+- It generates decision simulations, not only responses.
+- It combines personalization, retrieval, and reasoning in one architecture.
+- It is designed as an extensible open-source project rather than a closed demo.
+
+## Roadmap
+
+Planned directions include:
+
+- Emotion-aware cognitive modeling.
+- Reinforcement learning-based adaptation.
+- Better evaluation pipelines for simulation accuracy.
+- Multi-user deployment and scaling.
+- Behavioral analytics and developer-facing dashboards.
+
+## Open-source direction
+
+This repository is being developed as a collaborative open-source project focused on memory-aware and behavior-aware AI systems. Contributions, architectural feedback, experiments, and extensions are welcome.
+
+Good first contribution areas include:
+
+- Improving memory extraction quality.
+- Expanding simulation evaluation and benchmarks.
+- Strengthening API documentation.
+- Building cleaner frontend visualizations for profile and memory state.
+- Adding test coverage and developer tooling.
 
 ## Notes
 
-- Designed for local development and experimentation
-- Do not commit .env files
-- Ensure required environment variables are set before running
+- Built for local development and experimentation.
+- Do not commit `.env` files.
+- Ensure required environment variables are configured before running the project.
+
+## Maintainers
+
+The project is being built collaboratively by Bharath Kumar and my brother as an exploration of personalized, memory-driven AI systems.
